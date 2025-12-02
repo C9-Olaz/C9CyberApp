@@ -48,14 +48,14 @@ class HomeScreenViewModel(
 
                         // Tách chuỗi
                         val parts = dataString.split("|")
-                        if (parts.size >= 2) {
-                            val name = parts[0]
-                            val id = parts[1]
+                        if (parts.size >= 4) {
+                            val username = parts[1]
+                            val id = parts[0]
 
                             // Balance, Level rn does not store on card
                             val user = User(
                                 id = id,
-                                name = name,
+                                name = username,
                                 balance = 0,
                                 level = UserLevel.Bronze,
                                 avatar = byteArrayOf(),

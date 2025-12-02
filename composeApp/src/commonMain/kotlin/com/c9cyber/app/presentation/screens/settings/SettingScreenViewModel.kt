@@ -11,8 +11,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 data class SettingUiState(
-    val name: String = "",
-    val userId: String = "",
+    val memberId: String = "",
+    val username: String = "",
+    val fullName: String = "",
+    val memberLevel: String = "",
+
     val showPinDialog: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -33,17 +36,26 @@ class SettingScreenViewModel(
     private val INS_UPDATE_INFO = 0x50.toByte()
     private val INS_GET_INFO = 0x51.toByte()
 
-    fun onNameChange(newName: String) {
-        uiState = uiState.copy(name = newName)
+    fun onMemberIdChange(v: String) {
+        uiState = uiState.copy(memberId = v)
     }
 
-    fun onIdChange(newId: String) {
-        uiState = uiState.copy(userId = newId)
+    fun onUsernameChange(v: String) {
+        uiState = uiState.copy(username = v)
+    }
+
+    fun onFullNameChange(v: String) {
+        uiState = uiState.copy(fullName = v)
+    }
+
+    fun onLevelChange(v: String) {
+        uiState = uiState.copy(memberLevel = v)
     }
 
     fun onSaveClicked() {
-        // Validate cơ bản
-        if (uiState.name.isBlank() || uiState.userId.isBlank()) {
+        if (uiState.memberId.isBlank() || uiState.username.isBlank() ||
+            uiState.fullName.isBlank() || uiState.memberLevel.isBlank()
+        ) {
             uiState = uiState.copy(errorMessage = "Vui lòng nhập đầy đủ thông tin")
             return
         }
@@ -77,10 +89,7 @@ class SettingScreenViewModel(
                     return@launch
                 }
 
-                val name = uiState.name
-                val id = uiState.userId
-
-                val rawString = "$name|$id"
+                val rawString = "${uiState.memberId}|${uiState.username}|${uiState.fullName}|${uiState.memberLevel}"
                 val dataBytes = rawString.toByteArray(Charsets.US_ASCII)
 
                 // APDU: 00 50 00 00 Lc [Data]
@@ -94,7 +103,7 @@ class SettingScreenViewModel(
                         uiState = uiState.copy(
                             isLoading = false,
                             showPinDialog = false,
-                            successMessage = "Lưu thành công: $name"
+                            successMessage = "Lưu thành công: ${uiState.username}"
                         )
                     }
                 }
@@ -106,6 +115,7 @@ class SettingScreenViewModel(
             }
         }
     }
+
     fun loadUserInfoFromCard() {
         viewModelScope.launch {
             try {
@@ -115,14 +125,16 @@ class SettingScreenViewModel(
 
                 if (response != null && response.size > 2) {
                     val dataBytes = response.copyOfRange(0, response.size - 2)
-                    val dataString = String(dataBytes, Charsets.US_ASCII) // "Phuoc|CT0603"
+                    val dataString = String(dataBytes, Charsets.US_ASCII) // MaHoiVien|TenTaiKhoan|HoTen|CapDoThanhVien
 
                     val parts = dataString.split("|")
-                    if (parts.size >= 2) {
+                    if (parts.size >= 4) {
                         withContext(Dispatchers.Main) {
                             uiState = uiState.copy(
-                                name = parts[0],
-                                userId = parts[1]
+                                memberId = parts[0],
+                                username = parts[1],
+                                fullName = parts[2],
+                                memberLevel = parts[3]
                             )
                         }
                     }

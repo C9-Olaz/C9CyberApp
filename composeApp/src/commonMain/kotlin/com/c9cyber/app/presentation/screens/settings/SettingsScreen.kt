@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -87,19 +90,34 @@ fun SettingsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     TextField(
-                        value = state.name,
-                        onValueChange = { viewModel.onNameChange(it) },
-                        label = "Họ và Tên",
-                        icon = Icons.Default.Person
+                        value = state.memberId,
+                        onValueChange = { viewModel.onMemberIdChange(it) },
+                        label = "Mã Hội Viên",
+                        icon = Icons.Default.Badge
                     )
-
                     Spacer(modifier = Modifier.height(16.dp))
 
                     TextField(
-                        value = state.userId,
-                        onValueChange = { viewModel.onIdChange(it) },
-                        label = "Mã ID",
-                        icon = Icons.Default.Warning
+                        value = state.username,
+                        onValueChange = { viewModel.onUsernameChange(it) },
+                        label = "Tên Tài Khoản",
+                        icon = Icons.Default.AccountCircle
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    TextField(
+                        value = state.fullName,
+                        onValueChange = { viewModel.onFullNameChange(it) },
+                        label = "Họ và Tên",
+                        icon = Icons.Default.Person
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    TextField(
+                        value = state.memberLevel,
+                        onValueChange = { viewModel.onLevelChange(it) },
+                        label = "Cấp Độ Thành Viên",
+                        icon = Icons.Default.Star
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
