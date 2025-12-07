@@ -22,13 +22,13 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 fun StandbyScreens(
     viewModel: StandbyScreenViewModel,
-    onNavigateToHome: () -> Unit = {}
+    onLoginSuccess: () -> Unit = {}
 ) {
     val state = viewModel.uiState
 
     LaunchedEffect(state.status) {
         if (state.status == StandbyStatus.Success) {
-            onNavigateToHome()
+            onLoginSuccess()
         }
     }
 
@@ -70,7 +70,7 @@ fun StandbyScreens(
         PinDialog(
             errorMessage = fullErrorMessage,
             isLoading = state.isLoading,
-            onDismissRequest = { viewModel.onCardRemoved() },
+            onDismissRequest = { },
             onConfirm = { pin -> viewModel.verifyPin(pin) }
         )
     }

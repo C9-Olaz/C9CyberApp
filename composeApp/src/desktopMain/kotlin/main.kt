@@ -75,7 +75,7 @@ fun main() = application {
                 Surface(color = BackgroundPrimary, modifier = Modifier.fillMaxSize()) {
                     StandbyScreens(
                         viewModel = standbyViewModel,
-                        onNavigateToHome = {
+                        onLoginSuccess = {
                             isLoggedIn = true
                         }
                     )
