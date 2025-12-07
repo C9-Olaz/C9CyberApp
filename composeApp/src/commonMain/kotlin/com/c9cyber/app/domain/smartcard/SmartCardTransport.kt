@@ -1,6 +1,6 @@
 package com.c9cyber.app.domain.smartcard
 
-interface SmartCardService {
+interface SmartCardTransport {
     fun listReaders(): MutableList<String?>
 
     fun isCardPresent(terminalName: String?): Boolean

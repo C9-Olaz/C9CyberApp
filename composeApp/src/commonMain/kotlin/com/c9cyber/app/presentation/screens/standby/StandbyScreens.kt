@@ -9,7 +9,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.c9cyber.app.domain.smartcard.SmartCardService
+import com.c9cyber.app.domain.smartcard.SmartCardManager
+import com.c9cyber.app.domain.smartcard.SmartCardMonitor
+import com.c9cyber.app.domain.smartcard.SmartCardTransport
 import com.c9cyber.app.presentation.components.LogoSection
 import com.c9cyber.app.presentation.components.PinDialog
 import com.c9cyber.app.presentation.components.StandbyStatusView
@@ -68,7 +70,7 @@ fun StandbyScreens(
         PinDialog(
             errorMessage = fullErrorMessage,
             isLoading = state.isLoading,
-            onDismissRequest = { viewModel.cancelLogin() },
+            onDismissRequest = { viewModel.onCardRemoved() },
             onConfirm = { pin -> viewModel.verifyPin(pin) }
         )
     }
@@ -79,12 +81,13 @@ fun StandbyScreens(
 @Composable
 @Preview
 private fun preview() {
-    val smartcardService = MockCardService()
-    val viewModel = StandbyScreenViewModel(smartcardService)
+    val smartCardTransport = MockCardTransport()
+    val smartCardMonitor = SmartCardMonitor(smartCardTransport)
+    val viewModel = StandbyScreenViewModel(SmartCardManager(smartCardTransport, smartCardMonitor))
     StandbyScreens(viewModel, {})
 }
 
-private class MockCardService() : SmartCardService {
+private class MockCardTransport() : SmartCardTransport {
     override fun listReaders(): MutableList<String?> {
         TODO("Not yet implemented")
     }

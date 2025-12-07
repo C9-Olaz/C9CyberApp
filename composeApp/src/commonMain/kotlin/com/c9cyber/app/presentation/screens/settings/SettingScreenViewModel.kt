@@ -3,7 +3,7 @@ package com.c9cyber.app.presentation.screens.settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.c9cyber.app.domain.smartcard.SmartCardService
+import com.c9cyber.app.domain.smartcard.SmartCardTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,7 +27,7 @@ data class SettingUiState(
 )
 
 class SettingScreenViewModel(
-    private val smartCardService: SmartCardService
+    private val smartCardTransport: SmartCardTransport
 ) {
     var uiState by mutableStateOf(SettingUiState())
         private set
@@ -107,7 +107,7 @@ class SettingScreenViewModel(
                 val pinBytes = pin.toByteArray()
                 val verifyApdu = byteArrayOf(CLA_APPLET, INS_VERIFY, 0x00, 0x00, pinBytes.size.toByte()) + pinBytes
 
-                val verifyRes = smartCardService.transmit(verifyApdu)
+                val verifyRes = smartCardTransport.transmit(verifyApdu)
                 val verifySw = getStatusWord(verifyRes!!)
 
                 if (verifySw != 0x9000) {
@@ -125,7 +125,7 @@ class SettingScreenViewModel(
                 // APDU: 00 50 00 00 Lc [Data]
                 val apdu = byteArrayOf(CLA_APPLET, INS_UPDATE_INFO, 0x00, 0x00, dataBytes.size.toByte()) + dataBytes
 
-                val response = smartCardService.transmit(apdu)
+                val response = smartCardTransport.transmit(apdu)
                 val sw = getStatusWord(response!!)
 
                 if (sw == 0x9000) {
@@ -153,7 +153,7 @@ class SettingScreenViewModel(
                 // 1. Verify Old PIN
                 val oldPinBytes = uiState.oldPin.toByteArray()
                 val verifyApdu = byteArrayOf(CLA_APPLET, INS_VERIFY, 0x00, 0x00, oldPinBytes.size.toByte()) + oldPinBytes
-                val verifyRes = smartCardService.transmit(verifyApdu)
+                val verifyRes = smartCardTransport.transmit(verifyApdu)
                 val verifySw = getStatusWord(verifyRes!!)
 
                 when (verifySw) {
@@ -161,7 +161,7 @@ class SettingScreenViewModel(
 
                     }
                     0x6982, 0x6983 -> {
-                        smartCardService.disconnect()
+                        smartCardTransport.disconnect()
                         withContext(Dispatchers.Main) {
                             uiState = uiState.copy(isLoading = false)
                         }
@@ -183,7 +183,7 @@ class SettingScreenViewModel(
                 // 2. Change to New PIN
                 val newPinBytes = uiState.newPin.toByteArray()
                 val changeApdu = byteArrayOf(CLA_APPLET, INS_CHANGE_PIN, 0x00, 0x00, newPinBytes.size.toByte()) + newPinBytes
-                val changeRes = smartCardService.transmit(changeApdu)
+                val changeRes = smartCardTransport.transmit(changeApdu)
                 val changeSw = getStatusWord(changeRes!!)
 
                 if (changeSw == 0x9000) {
@@ -212,7 +212,7 @@ class SettingScreenViewModel(
             try {
                 // APDU: 00 51 00 00 00
                 val apdu = byteArrayOf(CLA_APPLET, INS_GET_INFO, 0x00, 0x00, 0x00)
-                val response = smartCardService.transmit(apdu)
+                val response = smartCardTransport.transmit(apdu)
 
                 if (response != null && response.size > 2) {
                     val dataBytes = response.copyOfRange(0, response.size - 2)

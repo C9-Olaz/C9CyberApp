@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.c9cyber.app.domain.model.User
 import com.c9cyber.app.domain.model.UserLevel
-import com.c9cyber.app.domain.smartcard.SmartCardService
+import com.c9cyber.app.domain.smartcard.SmartCardTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,7 +19,7 @@ data class HomeUiState(
 )
 
 class HomeScreenViewModel(
-    private val smartCardService: SmartCardService
+    private val smartCardTransport: SmartCardTransport
 ) {
     var uiState by mutableStateOf(HomeUiState())
         private set
@@ -36,7 +36,7 @@ class HomeScreenViewModel(
             try {
                 // APDU: 00 51 00 00 00
                 val apdu = byteArrayOf(CLA_APPLET, INS_GET_INFO, 0x00, 0x00, 0x00)
-                val response = smartCardService.transmit(apdu)
+                val response = smartCardTransport.transmit(apdu)
 
                 // Name|ID + SW
                 if (response != null && response.size >= 2) {
@@ -44,7 +44,7 @@ class HomeScreenViewModel(
 
                     if (sw == 0x9000) {
                         val dataBytes = response.copyOfRange(0, response.size - 2)
-                        val dataString = String(dataBytes, Charsets.US_ASCII)
+                        val dataString = String(dataBytes, Charsets.UTF_8)
 
                         // Tách chuỗi
                         val parts = dataString.split("|")
