@@ -64,7 +64,12 @@ class StandbyScreenViewModel(
                 val success = smartCardManager.trySelectApplet()
 
                 if (success) {
-                    updateState { it.copy(status = StandbyStatus.PinRequired, errorMessage = null) }
+                    if (smartCardManager.isCardLock()) {
+                        updateState { it.copy(status = StandbyStatus.CardLocked, isLoading = false) }
+                    }
+                    else {
+                        updateState { it.copy(status = StandbyStatus.PinRequired, errorMessage = null) }
+                    }
                     break
                 } else {
                     updateState {

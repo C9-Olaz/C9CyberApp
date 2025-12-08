@@ -70,6 +70,24 @@ class SmartCardManager(
         }
     }
 
+    fun isCardLock(): Boolean {
+        return try {
+            val apdu = byteArrayOf(AppletCLA, INS.CheckLock, 0x00, 0x00)
+            val respond = transport.transmit(apdu)
+            val sw = getStatusWord(respond)
+
+            when (sw) {
+                0x9000 -> false
+                0x6982 -> true
+                else -> true
+            }
+
+        } catch (e: Exception) {
+            println(e)
+            true
+        }
+    }
+
     fun unblockPin(): UnblockResult {
         return try {
             val readers = transport.listReaders()

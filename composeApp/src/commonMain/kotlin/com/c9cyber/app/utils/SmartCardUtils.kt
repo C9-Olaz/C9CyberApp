@@ -5,7 +5,7 @@ val AppletAID = byteArrayOf(0x06, 0x03, 0x30, 0x26, 0x01, 0x17, 0x00)
 
 
 object INS {
-    val GetTriesRemain = 0x22.toByte()
+    val CheckLock = 0x22.toByte()
     val VerifyPin = 0x20.toByte()
     val UnblockPin = 0x2C.toByte()
 }
