@@ -3,12 +3,13 @@ package com.c9cyber.app.domain.model
 enum class UserLevel { Bronze, Silver, Gold }
 
 data class User(
-    val id: String,
-    val name: String,
-    val balance: Int,
-    val level: UserLevel,
-    val avatar: ByteArray,
-    val totalUsableTime: Long
+    val id: String = "Null",
+    val userName: String = "Null",
+    val name: String = "Null",
+    val balance: Int = 0,
+    val level: UserLevel = UserLevel.Bronze,
+    val avatar: ByteArray? = null,
+    val totalUsableTime: Long = 0
 )
 
 enum class GameType { Online, Offline }

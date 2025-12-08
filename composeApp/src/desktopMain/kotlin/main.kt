@@ -37,7 +37,7 @@ fun main() = application {
     }
     val homeViewModel = remember(isLoggedIn)
     {
-        HomeScreenViewModel(smartCardTransport)
+        HomeScreenViewModel(smartCardManager)
     }
 
     val settingViewModel = remember(isLoggedIn)

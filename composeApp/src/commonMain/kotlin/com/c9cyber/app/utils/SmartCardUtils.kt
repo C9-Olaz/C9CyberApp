@@ -8,6 +8,8 @@ object INS {
     val CheckLock = 0x22.toByte()
     val VerifyPin = 0x20.toByte()
     val UnblockPin = 0x2C.toByte()
+    val SetInfo = 0x00.toByte()
+    val GetInfo = 0x51.toByte()
 }
 
 fun getStatusWord(response: ByteArray): Int {

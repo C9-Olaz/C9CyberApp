@@ -1,5 +1,7 @@
 package com.c9cyber.app.domain.smartcard
 
+import com.c9cyber.app.domain.model.User
+import com.c9cyber.app.domain.model.UserLevel
 import com.c9cyber.app.utils.AppletAID
 import com.c9cyber.app.utils.AppletCLA
 import com.c9cyber.app.utils.INS
@@ -119,6 +121,43 @@ class SmartCardManager(
             transport.disconnect()
             UnblockResult.Error("Lỗi: ${e.message}")
         }
+    }
+
+    fun loadUserInfo() : User {
+        var user = User()
+
+        try {
+            val apdu = byteArrayOf(AppletCLA, INS.GetInfo, 0x00, 0x00, 0x00)
+            val respond = transport.transmit(apdu)
+
+            if (respond.size >= 2) {
+                val sw = getStatusWord(respond)
+
+                if (sw == 0x9000) {
+                    val data = respond.copyOfRange(0, respond.size - 2)
+                    val dataString = String(data, Charsets.UTF_8)
+
+                    val sections = dataString.split("|")
+                    if (sections.size >= 4) {
+                        val memberId = sections[0]
+                        val username = sections[1]
+                        val name = sections[2]
+                        val level = sections[3]
+
+                        user = User(
+                            id = memberId,
+                            userName = username,
+                            name = name,
+                            level = UserLevel.valueOf(level),
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println(e)
+        }
+
+        return user
     }
 
 }
