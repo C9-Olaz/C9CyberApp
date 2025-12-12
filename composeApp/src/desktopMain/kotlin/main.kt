@@ -20,6 +20,9 @@ import com.c9cyber.app.presentation.screens.standby.StandbyScreenViewModel
 import com.c9cyber.app.presentation.screens.standby.StandbyScreens
 import com.c9cyber.app.presentation.theme.AppTypography
 import com.c9cyber.app.presentation.theme.BackgroundPrimary
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 fun main() = application {
     var isLoggedIn by remember { mutableStateOf(false) }
@@ -42,8 +45,10 @@ fun main() = application {
 
     val settingViewModel = remember(isLoggedIn)
     {
-        SettingScreenViewModel(smartCardTransport)
+        SettingScreenViewModel(smartCardManager)
     }
+
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         smartCardMonitor.startMonitoring(
@@ -56,7 +61,6 @@ fun main() = application {
             }
         )
     }
-
 
     if (!isLoggedIn) {
         val standbyWindowState = rememberWindowState(
@@ -118,7 +122,13 @@ fun main() = application {
                         Screen.Settings -> {
                             SettingsScreen(
                                 viewModel = settingViewModel,
-                                navigateTo = { screen -> currentMainScreen = screen }
+                                navigateTo = { screen -> currentMainScreen = screen },
+                                onCardLocked = {
+                                    scope.launch {
+                                        delay(1000)
+                                        isLoggedIn = false
+                                    }
+                                }
                             )
                         }
 

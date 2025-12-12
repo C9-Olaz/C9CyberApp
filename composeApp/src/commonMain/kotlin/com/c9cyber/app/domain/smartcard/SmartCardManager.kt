@@ -20,6 +20,20 @@ sealed class UnblockResult {
     data class Error(val message: String) : UnblockResult()
 }
 
+sealed class UpdateInfoResult {
+    data object Success : UpdateInfoResult()
+    data object CardLocked : UpdateInfoResult()
+    data class WrongPin(val remainingTries: Int) : UpdateInfoResult()
+    data class Error(val message: String) : UpdateInfoResult()
+}
+
+sealed class ChangePinResult {
+    data object Success : ChangePinResult()
+    data object CardLocked : ChangePinResult()
+    data class WrongOldPin(val remainingTries: Int) : ChangePinResult()
+    data class Error(val message: String) : ChangePinResult()
+}
+
 class SmartCardManager(
     val transport: SmartCardTransport,
     val monitor: SmartCardMonitor
@@ -123,6 +137,38 @@ class SmartCardManager(
         }
     }
 
+    fun changePin(oldPin: String, newPin: String): ChangePinResult {
+        return try {
+            val oldPinBytes = oldPin.toByteArray()
+            val verifyApdu = byteArrayOf(AppletCLA, INS.VerifyPin, 0x00, 0x00, oldPinBytes.size.toByte()) + oldPinBytes
+            val verifyRes = transport.transmit(verifyApdu)
+            val verifySw = getStatusWord(verifyRes)
+
+            when {
+                verifySw == 0x9000 -> {
+                }
+
+                verifySw == 0x6982 -> return ChangePinResult.CardLocked
+                (verifySw ushr 8) == 0x63 -> return ChangePinResult.WrongOldPin(verifySw and 0x0F)
+                else -> return ChangePinResult.Error("Lỗi xác thực: SW=${Integer.toHexString(verifySw)}")
+            }
+
+            val newPinBytes = newPin.toByteArray()
+            val changeApdu = byteArrayOf(AppletCLA, INS.ChangePin, 0x00, 0x00, newPinBytes.size.toByte()) + newPinBytes
+            val changeRes = transport.transmit(changeApdu)
+            val changeSw = getStatusWord(changeRes)
+
+            if (changeSw == 0x9000) {
+                ChangePinResult.Success
+            } else {
+                ChangePinResult.Error("Lỗi đổi PIN: SW=${Integer.toHexString(changeSw)}")
+            }
+
+        } catch (e: Exception) {
+            ChangePinResult.Error("Lỗi kết nối: ${e.message}")
+        }
+    }
+
     fun loadUserInfo() : User {
         var user = User()
 
@@ -160,4 +206,37 @@ class SmartCardManager(
         return user
     }
 
+    fun updateUserInfo(userInfo: User, pin: String): UpdateInfoResult {
+        return try {
+            // 1. Verify PIN (Sử dụng lại logic từ verifyPin, nhưng cần check CardLocked)
+            val verifyResult = verifyPin(pin)
+            when (verifyResult) {
+                is PinVerifyResult.Success -> {
+                    // OK để tiếp tục
+                }
+
+                is PinVerifyResult.CardLocked -> return UpdateInfoResult.CardLocked
+                is PinVerifyResult.WrongPin -> return UpdateInfoResult.WrongPin(verifyResult.remainingTries)
+                is PinVerifyResult.Error -> return UpdateInfoResult.Error(verifyResult.message)
+            }
+
+            // 2. Update Info
+            val rawString = "${userInfo.id}|${userInfo.userName}|${userInfo.name}|${userInfo.level.name}"
+            val dataBytes = rawString.toByteArray(Charsets.US_ASCII)
+
+            // APDU: 00 50 00 00 Lc [Data]
+            val apdu = byteArrayOf(AppletCLA, INS.SetInfo, 0x00, 0x00, dataBytes.size.toByte()) + dataBytes
+
+            val response = transport.transmit(apdu)
+            val sw = getStatusWord(response)
+
+            if (sw == 0x9000) {
+                UpdateInfoResult.Success
+            } else {
+                UpdateInfoResult.Error("Lỗi thẻ: SW=${Integer.toHexString(sw)}")
+            }
+        } catch (e: Exception) {
+            UpdateInfoResult.Error("Lỗi kết nối: ${e.message}")
+        }
+    }
 }

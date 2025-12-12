@@ -3,7 +3,12 @@ package com.c9cyber.app.presentation.screens.settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.c9cyber.app.domain.model.User
+import com.c9cyber.app.domain.model.UserLevel
+import com.c9cyber.app.domain.smartcard.ChangePinResult
+import com.c9cyber.app.domain.smartcard.SmartCardManager
 import com.c9cyber.app.domain.smartcard.SmartCardTransport
+import com.c9cyber.app.domain.smartcard.UpdateInfoResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,6 +25,7 @@ data class SettingUiState(
     val newPin: String = "",
     val confirmNewPin: String = "",
 
+    val isCardLocked: Boolean = false,
     val showPinDialog: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -27,19 +33,12 @@ data class SettingUiState(
 )
 
 class SettingScreenViewModel(
-    private val smartCardTransport: SmartCardTransport
+    private val smartCardManager: SmartCardManager
 ) {
     var uiState by mutableStateOf(SettingUiState())
         private set
 
     private val viewModelScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    // APDU Config
-    private val CLA_APPLET = 0x00.toByte()
-    private val INS_VERIFY = 0x20.toByte()
-    private val INS_CHANGE_PIN = 0x21.toByte()
-    private val INS_UPDATE_INFO = 0x50.toByte()
-    private val INS_GET_INFO = 0x51.toByte()
 
     fun onMemberIdChange(v: String) {
         uiState = uiState.copy(memberId = v)
@@ -102,106 +101,80 @@ class SettingScreenViewModel(
         viewModelScope.launch {
             uiState = uiState.copy(isLoading = true, errorMessage = null)
 
-            try {
-                // Verify PIN
-                val pinBytes = pin.toByteArray()
-                val verifyApdu = byteArrayOf(CLA_APPLET, INS_VERIFY, 0x00, 0x00, pinBytes.size.toByte()) + pinBytes
+            val userToUpdate = User(
+                id = uiState.memberId,
+                userName = uiState.username,
+                name = uiState.fullName,
+                level = UserLevel.valueOf(uiState.memberLevel)
+            )
 
-                val verifyRes = smartCardTransport.transmit(verifyApdu)
-                val verifySw = getStatusWord(verifyRes!!)
-
-                if (verifySw != 0x9000) {
-                    val msg =
-                        if ((verifySw ushr 8) == 0x63) "Sai mã PIN!" else "Lỗi xác thực: ${Integer.toHexString(verifySw)}"
-                    withContext(Dispatchers.Main) {
-                        uiState = uiState.copy(isLoading = false, errorMessage = msg)
-                    }
-                    return@launch
+            when (val result = smartCardManager.updateUserInfo(userToUpdate, pin)) {
+                is UpdateInfoResult.Success -> {
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        showPinDialog = false,
+                        successMessage = "Lưu thành công: ${uiState.username}"
+                    )
                 }
 
-                val rawString = "${uiState.memberId}|${uiState.username}|${uiState.fullName}|${uiState.memberLevel}"
-                val dataBytes = rawString.toByteArray(Charsets.US_ASCII)
-
-                // APDU: 00 50 00 00 Lc [Data]
-                val apdu = byteArrayOf(CLA_APPLET, INS_UPDATE_INFO, 0x00, 0x00, dataBytes.size.toByte()) + dataBytes
-
-                val response = smartCardTransport.transmit(apdu)
-                val sw = getStatusWord(response!!)
-
-                if (sw == 0x9000) {
-                    withContext(Dispatchers.Main) {
-                        uiState = uiState.copy(
-                            isLoading = false,
-                            showPinDialog = false,
-                            successMessage = "Lưu thành công: ${uiState.username}"
-                        )
-                    }
+                is UpdateInfoResult.CardLocked -> {
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        showPinDialog = false,
+                        isCardLocked = true,
+                        errorMessage = "Thẻ đã bị khóa"
+                    )
                 }
 
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    uiState = uiState.copy(isLoading = false, errorMessage = "Lỗi kết nối: ${e.message}")
+                is UpdateInfoResult.WrongPin -> {
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        errorMessage = "Sai mã PIN! (Còn ${result.remainingTries} lần)"
+                    )
+                }
+
+                is UpdateInfoResult.Error -> {
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        errorMessage = result.message
+                    )
                 }
             }
         }
     }
-
     private fun performChangePin() {
         viewModelScope.launch {
             uiState = uiState.copy(isLoading = true, errorMessage = null)
-            try {
-                // 1. Verify Old PIN
-                val oldPinBytes = uiState.oldPin.toByteArray()
-                val verifyApdu = byteArrayOf(CLA_APPLET, INS_VERIFY, 0x00, 0x00, oldPinBytes.size.toByte()) + oldPinBytes
-                val verifyRes = smartCardTransport.transmit(verifyApdu)
-                val verifySw = getStatusWord(verifyRes!!)
 
-                when (verifySw) {
-                    0x9000 -> {
-
-                    }
-                    0x6982, 0x6983 -> {
-                        smartCardTransport.disconnect()
-                        withContext(Dispatchers.Main) {
-                            uiState = uiState.copy(isLoading = false)
-                        }
-                        return@launch
-                    }
-                    else -> {
-                        val msg = if ((verifySw ushr 8) == 0x63) {
-                            "Mã PIN cũ không đúng! (Còn ${verifySw and 0x0F} lần)"
-                        } else {
-                            "Lỗi xác thực: ${Integer.toHexString(verifySw)}"
-                        }
-                        withContext(Dispatchers.Main) {
-                            uiState = uiState.copy(isLoading = false, errorMessage = msg)
-                        }
-                        return@launch
-                    }
+            when (val result = smartCardManager.changePin(uiState.oldPin, uiState.newPin)) {
+                is ChangePinResult.Success -> {
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        successMessage = "Đổi mã PIN thành công!",
+                        oldPin = "", newPin = "", confirmNewPin = ""
+                    )
                 }
 
-                // 2. Change to New PIN
-                val newPinBytes = uiState.newPin.toByteArray()
-                val changeApdu = byteArrayOf(CLA_APPLET, INS_CHANGE_PIN, 0x00, 0x00, newPinBytes.size.toByte()) + newPinBytes
-                val changeRes = smartCardTransport.transmit(changeApdu)
-                val changeSw = getStatusWord(changeRes!!)
-
-                if (changeSw == 0x9000) {
-                    withContext(Dispatchers.Main) {
-                        uiState = uiState.copy(
-                            isLoading = false,
-                            successMessage = "Đổi mã PIN thành công!",
-                            oldPin = "", newPin = "", confirmNewPin = ""
-                        )
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        uiState = uiState.copy(isLoading = false, errorMessage = "Lỗi đổi PIN: ${Integer.toHexString(changeSw)}")
-                    }
+                is ChangePinResult.CardLocked -> {
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        isCardLocked = true,
+                        errorMessage = "Thẻ đã bị khóa."
+                    )
                 }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    uiState = uiState.copy(isLoading = false, errorMessage = "Lỗi kết nối: ${e.message}")
+
+                is ChangePinResult.WrongOldPin -> {
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        errorMessage = "Mã PIN cũ không đúng! (Còn ${result.remainingTries} lần)"
+                    )
+                }
+
+                is ChangePinResult.Error -> {
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        errorMessage = result.message
+                    )
                 }
             }
         }
@@ -209,44 +182,30 @@ class SettingScreenViewModel(
 
     fun loadUserInfoFromCard() {
         viewModelScope.launch {
-            try {
-                // APDU: 00 51 00 00 00
-                val apdu = byteArrayOf(CLA_APPLET, INS_GET_INFO, 0x00, 0x00, 0x00)
-                val response = smartCardTransport.transmit(apdu)
+            uiState = uiState.copy(isLoading = true, errorMessage = null)
 
-                if (response != null && response.size > 2) {
-                    val dataBytes = response.copyOfRange(0, response.size - 2)
-                    val dataString = String(dataBytes, Charsets.US_ASCII) // MaHoiVien|TenTaiKhoan|HoTen|CapDoThanhVien
+            val user = smartCardManager.loadUserInfo()
 
-                    val parts = dataString.split("|")
-                    if (parts.size >= 4) {
-                        withContext(Dispatchers.Main) {
-                            uiState = uiState.copy(
-                                memberId = parts[0],
-                                username = parts[1],
-                                fullName = parts[2],
-                                memberLevel = parts[3]
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    uiState = uiState.copy(isLoading = false, errorMessage = "Lỗi kết nối: ${e.message}")
-                }
+            if (user.id.isNotEmpty()) {
+                uiState = uiState.copy(
+                    memberId = user.id,
+                    username = user.userName,
+                    fullName = user.name,
+                    memberLevel = user.level.name,
+                    isLoading = false,
+                    errorMessage = null
+                )
+            } else {
+                uiState = uiState.copy(
+                    isLoading = false,
+                    errorMessage = "Không thể đọc thông tin người dùng từ thẻ."
+                )
             }
         }
     }
-
 
     fun dismissSuccessMessage() {
         uiState = uiState.copy(successMessage = null)
     }
 
-    private fun getStatusWord(response: ByteArray): Int {
-        if (response.size < 2) return 0
-        val sw1 = response[response.size - 2].toInt() and 0xFF
-        val sw2 = response[response.size - 1].toInt() and 0xFF
-        return (sw1 shl 8) or sw2
-    }
 }

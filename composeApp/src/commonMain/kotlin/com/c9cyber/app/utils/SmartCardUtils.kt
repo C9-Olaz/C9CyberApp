@@ -6,9 +6,10 @@ val AppletAID = byteArrayOf(0x06, 0x03, 0x30, 0x26, 0x01, 0x17, 0x00)
 
 object INS {
     val CheckLock = 0x22.toByte()
+    val ChangePin = 0x21.toByte()
     val VerifyPin = 0x20.toByte()
     val UnblockPin = 0x2C.toByte()
-    val SetInfo = 0x00.toByte()
+    val SetInfo = 0x50.toByte()
     val GetInfo = 0x51.toByte()
 }
 
