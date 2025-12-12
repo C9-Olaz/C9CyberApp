@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class SmartCardServiceImpl implements SmartCardService {
+public class SmartCardTransportImpl implements SmartCardTransport {
     private Card activeCard = null;
     private String connectedTerminalName = null;
 

@@ -3,22 +3,11 @@ package com.c9cyber.app.presentation.screens.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,27 +19,29 @@ import com.c9cyber.app.presentation.components.ChangePinForm
 import com.c9cyber.app.presentation.components.PinDialog
 import com.c9cyber.app.presentation.components.UserInfoForm
 import com.c9cyber.app.presentation.navigation.Screen
-import com.c9cyber.app.presentation.theme.AccentColor
-import com.c9cyber.app.presentation.theme.BackgroundPrimary
-import com.c9cyber.app.presentation.theme.BackgroundSecondary
-import com.c9cyber.app.presentation.theme.DestructiveColor
-import com.c9cyber.app.presentation.theme.TextPrimary
+import com.c9cyber.app.presentation.theme.*
 import kotlinx.coroutines.delay
 
 @Composable
 fun SettingsScreen(
     viewModel: SettingScreenViewModel,
-    navigateTo: (Screen) -> Unit
+    navigateTo: (Screen) -> Unit,
+    onCardLocked: () -> Unit
 ) {
     val state = viewModel.uiState
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("Thông tin cá nhân", "Thay đổi mã PIN")
 
-    // Tự động ẩn thông báo thành công sau 3 giây
     LaunchedEffect(state.successMessage) {
         if (state.successMessage != null) {
             delay(3000)
             viewModel.dismissSuccessMessage()
+        }
+    }
+
+    LaunchedEffect(state.isCardLocked) {
+        if (state.isCardLocked) {
+            onCardLocked() // Gọi callback để thoát ra main
         }
     }
 

@@ -1,3 +1,4 @@
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
@@ -5,9 +6,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.*
-import androidx.compose.foundation.layout.fillMaxSize
-import com.c9cyber.app.domain.smartcard.SmartCardServiceImpl
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPosition
+import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
+import com.c9cyber.app.domain.smartcard.SmartCardManager
+import com.c9cyber.app.domain.smartcard.SmartCardMonitor
+import com.c9cyber.app.domain.smartcard.SmartCardTransportImpl
 import com.c9cyber.app.presentation.navigation.Screen
 import com.c9cyber.app.presentation.screens.home.HomeScreen
 import com.c9cyber.app.presentation.screens.home.HomeScreenViewModel
@@ -18,25 +23,45 @@ import com.c9cyber.app.presentation.screens.standby.StandbyScreenViewModel
 import com.c9cyber.app.presentation.screens.standby.StandbyScreens
 import com.c9cyber.app.presentation.theme.AppTypography
 import com.c9cyber.app.presentation.theme.BackgroundPrimary
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 fun main() = application {
     var isLoggedIn by remember { mutableStateOf(false) }
 
-    val smartCardService = remember { SmartCardServiceImpl() }
-    val standbyViewModel = remember { StandbyScreenViewModel(smartCardService) }
-    val homeViewModel = remember { HomeScreenViewModel(smartCardService) }
-    val settingViewModel = remember { SettingScreenViewModel(smartCardService) }
+    val smartCardTransport = remember { SmartCardTransportImpl() }
+    val smartCardMonitor = remember { SmartCardMonitor(smartCardTransport) }
 
-    LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn) {
-            standbyViewModel.startSessionMonitoring(
-                onCardRemoved = {
-                    isLoggedIn = false
-                }
-            )
-        } else {
-            standbyViewModel.cancelLogin()
-        }
+    val smartCardManager = SmartCardManager(
+        transport = smartCardTransport,
+        monitor = smartCardMonitor
+    )
+
+    val standbyViewModel = remember(isLoggedIn) {
+        StandbyScreenViewModel(smartCardManager)
+    }
+    val homeViewModel = remember(isLoggedIn)
+    {
+        HomeScreenViewModel(smartCardManager)
+    }
+
+    val settingViewModel = remember(isLoggedIn)
+    {
+        SettingScreenViewModel(smartCardManager)
+    }
+
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        smartCardMonitor.startMonitoring(
+            onCardRemoved = {
+                isLoggedIn = false
+                println("Card Removed")
+            },
+            onCardInserted = {
+                println("Card Inserted")
+            }
+        )
     }
 
     if (!isLoggedIn) {
@@ -56,7 +81,7 @@ fun main() = application {
                 Surface(color = BackgroundPrimary, modifier = Modifier.fillMaxSize()) {
                     StandbyScreens(
                         viewModel = standbyViewModel,
-                        onNavigateToHome = {
+                        onLoginSuccess = {
                             isLoggedIn = true
                         }
                     )
@@ -99,7 +124,13 @@ fun main() = application {
                         Screen.Settings -> {
                             SettingsScreen(
                                 viewModel = settingViewModel,
-                                navigateTo = { screen -> currentMainScreen = screen }
+                                navigateTo = { screen -> currentMainScreen = screen },
+                                onCardLocked = {
+                                    scope.launch {
+                                        delay(1000)
+                                        isLoggedIn = false
+                                    }
+                                }
                             )
                         }
 
