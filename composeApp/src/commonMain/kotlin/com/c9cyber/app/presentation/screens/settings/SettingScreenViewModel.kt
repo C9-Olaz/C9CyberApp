@@ -7,13 +7,11 @@ import com.c9cyber.app.domain.model.User
 import com.c9cyber.app.domain.model.UserLevel
 import com.c9cyber.app.domain.smartcard.ChangePinResult
 import com.c9cyber.app.domain.smartcard.SmartCardManager
-import com.c9cyber.app.domain.smartcard.SmartCardTransport
 import com.c9cyber.app.domain.smartcard.UpdateInfoResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 data class SettingUiState(
     val memberId: String = "",

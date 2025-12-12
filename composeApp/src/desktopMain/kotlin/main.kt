@@ -1,3 +1,4 @@
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
@@ -5,8 +6,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.*
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPosition
+import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 import com.c9cyber.app.domain.smartcard.SmartCardManager
 import com.c9cyber.app.domain.smartcard.SmartCardMonitor
 import com.c9cyber.app.domain.smartcard.SmartCardTransportImpl
@@ -20,7 +23,6 @@ import com.c9cyber.app.presentation.screens.standby.StandbyScreenViewModel
 import com.c9cyber.app.presentation.screens.standby.StandbyScreens
 import com.c9cyber.app.presentation.theme.AppTypography
 import com.c9cyber.app.presentation.theme.BackgroundPrimary
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
