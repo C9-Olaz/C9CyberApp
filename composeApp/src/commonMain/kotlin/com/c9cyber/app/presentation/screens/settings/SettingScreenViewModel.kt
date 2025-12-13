@@ -26,6 +26,7 @@ data class SettingUiState(
     val isCardLocked: Boolean = false,
     val showPinDialog: Boolean = false,
     val isLoading: Boolean = false,
+    val isEditing: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null
 )
@@ -52,6 +53,15 @@ class SettingScreenViewModel(
 
     fun onLevelChange(v: String) {
         uiState = uiState.copy(memberLevel = v)
+    }
+
+    fun onEditClicked() {
+        uiState = uiState.copy(isEditing = true, errorMessage = null)
+    }
+
+    fun onCancelEditClicked() {
+        uiState = uiState.copy(isEditing = false, errorMessage = null)
+        loadUserInfoFromCard()
     }
 
     fun onSaveInfoClicked() {
@@ -115,6 +125,7 @@ class SettingScreenViewModel(
                 is UpdateInfoResult.Success -> {
                     uiState = uiState.copy(
                         isLoading = false,
+                        isEditing = false,
                         showPinDialog = false,
                         successMessage = "Lưu thành công: ${uiState.username}"
                     )
@@ -209,6 +220,10 @@ class SettingScreenViewModel(
 
     fun dismissSuccessMessage() {
         uiState = uiState.copy(successMessage = null)
+    }
+
+    fun resetState() {
+        uiState = SettingUiState()
     }
 
 }

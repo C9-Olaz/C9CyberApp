@@ -1,12 +1,12 @@
 package com.c9cyber.app.presentation.components
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Icon
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -22,53 +22,103 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.c9cyber.app.presentation.screens.settings.SettingScreenViewModel
 import com.c9cyber.app.presentation.screens.settings.SettingUiState
 import com.c9cyber.app.presentation.theme.AccentColor
+import com.c9cyber.app.presentation.theme.BackgroundPrimary
 import com.c9cyber.app.presentation.theme.TextPrimary
 
 @Composable
-fun UserInfoForm(state: SettingUiState, viewModel: SettingScreenViewModel) {
-    TextField(
-        value = state.memberId,
-        onValueChange = { viewModel.onMemberIdChange(it) },
-        label = "Mã Hội Viên",
-        icon = Icons.Default.Badge
-    )
-    Spacer(modifier = Modifier.height(16.dp))
-
-    TextField(
-        value = state.username,
-        onValueChange = { viewModel.onUsernameChange(it) },
-        label = "Tên Tài Khoản",
-        icon = Icons.Default.AccountCircle
-    )
-    Spacer(modifier = Modifier.height(16.dp))
-
-    TextField(
-        value = state.fullName,
-        onValueChange = { viewModel.onFullNameChange(it) },
-        label = "Họ và Tên",
-        icon = Icons.Default.Person
-    )
-    Spacer(modifier = Modifier.height(16.dp))
-
-    TextField(
-        value = state.memberLevel,
-        onValueChange = { viewModel.onLevelChange(it) },
-        label = "Cấp Độ Thành Viên",
-        icon = Icons.Default.Star
-    )
-
-    Spacer(modifier = Modifier.height(32.dp))
-
-    Button(
-        onClick = { viewModel.onSaveInfoClicked() },
-        colors = ButtonDefaults.buttonColors(backgroundColor = AccentColor),
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth().height(50.dp)
+fun UserInfoForm(
+    state: SettingUiState,
+    onFullNameChange: (String) -> Unit,
+    onUserNameChange: (String) -> Unit,
+    onEditClicked: () -> Unit,
+    onCancelEditClicked: () -> Unit,
+    onSaveInfoClicked: () -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text("LƯU THAY ĐỔI", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+        TextField(
+            value = state.fullName,
+            onValueChange = onFullNameChange,
+            label = "Họ và tên",
+            icon = Icons.Default.Person,
+            enabled = state.isEditing
+        )
+
+        TextField(
+            value = state.username,
+            onValueChange = onUserNameChange,
+            label = "Tên tài khoản",
+            icon = Icons.Default.AccountCircle,
+            enabled = state.isEditing
+        )
+
+        TextField(
+            value = state.memberId,
+            onValueChange = {},
+            label = "Mã hội viên",
+            icon = Icons.Default.Badge,
+            enabled = false
+        )
+
+        TextField(
+            value = state.memberLevel,
+            onValueChange = {},
+            label = "Cấp độ",
+            icon = Icons.Default.Star,
+            enabled = false
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (!state.isEditing) {
+            Button(
+                onClick = onEditClicked,
+                colors = ButtonDefaults.buttonColors(backgroundColor = AccentColor),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp)
+            ) {
+                Text(
+                    "THAY ĐỔI THÔNG TIN",
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                OutlinedButton(
+                    onClick = onCancelEditClicked,
+                    border = BorderStroke(1.dp, Color.Gray),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        backgroundColor = Color.Transparent,
+                        contentColor = Color.Transparent
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f).height(50.dp)
+                ) {
+                    Text("Hủy", color = Color.Gray, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Button(
+                    onClick = onSaveInfoClicked,
+                    colors = ButtonDefaults.buttonColors(backgroundColor = AccentColor),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f).height(50.dp)
+                ) {
+                    Text("Lưu", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            }
+        }
     }
 }
 
@@ -77,22 +127,39 @@ private fun TextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    icon: ImageVector
+    icon: ImageVector,
+    enabled: Boolean
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label, color = Color.White) },
-        leadingIcon = { Icon(icon, contentDescription = null, tint = AccentColor) },
+        leadingIcon = {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = if (enabled) AccentColor else Color.Gray
+            )
+        },
         singleLine = true,
+        enabled = enabled,
         colors = OutlinedTextFieldDefaults.colors(
+            // Focused State
             focusedBorderColor = AccentColor,
-            unfocusedBorderColor = Color.Gray,
             focusedLabelColor = AccentColor,
-            unfocusedLabelColor = Color.Gray,
-            cursorColor = AccentColor,
             focusedTextColor = TextPrimary,
+            cursorColor = AccentColor,
+
+            // Unfocused State
+            unfocusedBorderColor = Color.Gray,
+            unfocusedLabelColor = Color.Gray,
             unfocusedTextColor = TextPrimary,
+
+            // Disabled State (Darker/Grayed out)
+            disabledBorderColor = Color.DarkGray,
+            disabledLabelColor = Color.Gray,
+            disabledTextColor = Color.LightGray,
+            disabledLeadingIconColor = Color.Gray
         ),
         modifier = Modifier.fillMaxWidth()
     )

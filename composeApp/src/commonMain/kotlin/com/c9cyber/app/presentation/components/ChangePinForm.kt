@@ -27,33 +27,40 @@ import com.c9cyber.app.presentation.screens.settings.SettingScreenViewModel
 import com.c9cyber.app.presentation.screens.settings.SettingUiState
 import com.c9cyber.app.presentation.theme.AccentColor
 import com.c9cyber.app.presentation.theme.TextPrimary
+import kotlinproject.composeapp.generated.resources.Res
 
 @Composable
-fun ChangePinForm(state: SettingUiState, viewModel: SettingScreenViewModel) {
+fun ChangePinForm(
+    state: SettingUiState,
+    onOldPinChange: (String) -> Unit,
+    onNewPinChange: (String) -> Unit,
+    onConfirmNewPinChange: (String) -> Unit,
+    onChangePinClicked: () -> Unit,
+) {
     PinTextField(
         value = state.oldPin,
-        onValueChange = { viewModel.onOldPinChange(it) },
+        onValueChange = onOldPinChange,
         label = "Mã PIN cũ"
     )
     Spacer(modifier = Modifier.height(16.dp))
 
     PinTextField(
         value = state.newPin,
-        onValueChange = { viewModel.onNewPinChange(it) },
+        onValueChange = onNewPinChange,
         label = "Mã PIN mới"
     )
     Spacer(modifier = Modifier.height(16.dp))
 
     PinTextField(
         value = state.confirmNewPin,
-        onValueChange = { viewModel.onConfirmPinChange(it) },
+        onValueChange = onConfirmNewPinChange,
         label = "Nhập lại mã PIN mới"
     )
 
     Spacer(modifier = Modifier.height(32.dp))
 
     Button(
-        onClick = { viewModel.onChangePinClicked() },
+        onClick = onChangePinClicked,
         colors = ButtonDefaults.buttonColors(backgroundColor = AccentColor),
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -62,7 +69,7 @@ fun ChangePinForm(state: SettingUiState, viewModel: SettingScreenViewModel) {
         if (state.isLoading) {
             CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(24.dp))
         } else {
-            Text("ĐỔI MÃ PIN", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("Đổi mã PIN", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }

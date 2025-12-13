@@ -45,6 +45,10 @@ fun SettingsScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.loadUserInfoFromCard()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -52,7 +56,10 @@ fun SettingsScreen(
             .padding(24.dp)
     ) {
         IconButton(
-            onClick = { navigateTo(Screen.Home) },
+            onClick = {
+                navigateTo(Screen.Home)
+                viewModel.resetState()
+            },
             modifier = Modifier.align(Alignment.TopStart).size(48.dp)
         ) {
             Icon(
@@ -116,9 +123,22 @@ fun SettingsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (selectedTabIndex == 0) {
-                        UserInfoForm(state, viewModel)
+                        UserInfoForm(
+                            state = state,
+                            onFullNameChange = viewModel::onFullNameChange,
+                            onUserNameChange = viewModel::onUsernameChange,
+                            onEditClicked = viewModel::onEditClicked,
+                            onCancelEditClicked = viewModel::onCancelEditClicked,
+                            onSaveInfoClicked = viewModel::onSaveInfoClicked
+                        )
                     } else {
-                        ChangePinForm(state, viewModel)
+                        ChangePinForm(
+                            state = state,
+                            onOldPinChange = viewModel::onOldPinChange,
+                            onNewPinChange = viewModel::onNewPinChange,
+                            onConfirmNewPinChange = viewModel::onConfirmPinChange,
+                            onChangePinClicked = viewModel::onChangePinClicked
+                        )
                     }
                 }
             }
@@ -177,22 +197,27 @@ private fun TextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    icon: ImageVector
+    icon: ImageVector,
+    enabled: Boolean = true
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
-        leadingIcon = { Icon(icon, contentDescription = null, tint = AccentColor) },
+        leadingIcon = { Icon(icon, contentDescription = null, tint = if (enabled) AccentColor else Color.Gray) },
         singleLine = true,
+        enabled = enabled,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = AccentColor,
             unfocusedBorderColor = Color.Gray,
+            disabledBorderColor = Color.DarkGray,
             focusedLabelColor = AccentColor,
             unfocusedLabelColor = Color.Gray,
+            disabledLabelColor = Color.Gray,
             cursorColor = AccentColor,
             focusedTextColor = TextPrimary,
             unfocusedTextColor = TextPrimary,
+            disabledTextColor = Color.LightGray
         ),
         modifier = Modifier.fillMaxWidth()
     )
