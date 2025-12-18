@@ -7,6 +7,9 @@ import java.util.Base64
 
 object KeyUtils {
     fun convertModulusToPem(modulusBytes: ByteArray): String {
+        // 1. Ensure correct length for RSA-1024
+        require(modulusBytes.size == 128) { "Modulus size is ${modulusBytes.size}, expected 128" }
+
         val modulus = BigInteger(1, modulusBytes)
         val exponent = BigInteger.valueOf(65537)
 
@@ -18,12 +21,8 @@ object KeyUtils {
         val base64Key = Base64.getEncoder().encodeToString(publicKey.encoded)
 
         // Multi-line chunking is standard for PEM
-        val formattedKey = base64Key.chunked(64).joinToString("\\n")
+        val formattedKey = base64Key.chunked(64).joinToString("\n")
 
-        return """
-        -----BEGIN PUBLIC KEY-----
-        $formattedKey
-        -----END PUBLIC KEY-----
-        """.trimIndent()
+        return """-----BEGIN PUBLIC KEY-----\n$formattedKey\n-----END PUBLIC KEY-----""".trimIndent()
     }
 }

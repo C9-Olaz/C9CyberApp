@@ -14,7 +14,9 @@ class AuthRepository(
         try {
             // 1. Get Challenge from Ktor
             val base64Challenge = apiService.getChallenge(userId)
-                ?: return@withContext Result.failure(Exception("Failed to obtain challenge"))
+                ?: return@withContext Result.failure(Exception("ID thẻ không hợp lệ")) // No id found
+
+            println("Challenged received: $base64Challenge")
 
             // 2. RSA Sign with Smart Card
             val rawChallenge = Base64.getDecoder().decode(base64Challenge)
@@ -26,7 +28,7 @@ class AuthRepository(
             val isVerified = apiService.verifyChallenge(userId, signedBase64)
 
             if (isVerified) Result.success(Unit)
-            else Result.failure(Exception("Challenge verification failed"))
+            else Result.failure(Exception("Thẻ không hợp lệ"))
 
         } catch (e: Exception) {
             Result.failure(e)

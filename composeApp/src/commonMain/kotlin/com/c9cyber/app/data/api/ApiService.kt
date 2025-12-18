@@ -9,7 +9,7 @@ import io.ktor.http.*
 import kotlinx.serialization.json.Json
 
 class ApiService(private val client: HttpClient) {
-    private val baseUrl = BuildConfig.BASE_URL
+    private val baseUrl = "http://euler.olaz.io.vn:3000"
 
     suspend fun registerUser(userId: String, pemPublicKey: String): Boolean {
         val requestBody = RegisterRequest(
@@ -29,9 +29,14 @@ class ApiService(private val client: HttpClient) {
     }
 
     suspend fun getChallenge(userId: String): String? {
-        val response = client.post("$baseUrl/auth/challenge") {
+        val requestBody = ChallengeRequest(user_id = userId)
+
+        val jsonString = Json.encodeToString(requestBody)
+        println(jsonString)
+
+        val response = client.post("$baseUrl/api/auth/challenge") {
             contentType(ContentType.Application.Json)
-            setBody(ChallengeRequest(user_id = userId))
+            setBody(jsonString)
         }
         return if (response.status == HttpStatusCode.OK) {
             response.body<ChallengeResponse>().challenge
@@ -39,9 +44,14 @@ class ApiService(private val client: HttpClient) {
     }
 
     suspend fun verifyChallenge(userId: String, encryptedChallenge: String): Boolean {
-        val response = client.post("$baseUrl/auth/verify") {
+        val requestBody = VerifyRequest(user_id = userId, encrypted_challenge = encryptedChallenge)
+
+        val jsonString = Json.encodeToString(requestBody)
+        println(jsonString)
+
+        val response = client.post("$baseUrl/api/auth/verify") {
             contentType(ContentType.Application.Json)
-            setBody(VerifyRequest(user_id = userId, encrypted_challenge = encryptedChallenge))
+            setBody(jsonString)
         }
         return response.status == HttpStatusCode.OK
     }

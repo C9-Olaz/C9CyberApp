@@ -79,12 +79,12 @@ fun StandbyScreens(
 }
 
 
-@Composable
-@Preview
-private fun preview() {
-    val smartCardTransport = MockSmartCardTransport()
-    val smartCardMonitor = SmartCardMonitor(smartCardTransport)
-    val viewModel = StandbyScreenViewModel(SmartCardManager(smartCardTransport, smartCardMonitor))
-    StandbyScreens(viewModel, {})
-}
+//@Composable
+//@Preview
+//private fun preview() {
+//    val smartCardTransport = MockSmartCardTransport()
+//    val smartCardMonitor = SmartCardMonitor(smartCardTransport)
+//    val viewModel = StandbyScreenViewModel(SmartCardManager(smartCardTransport, smartCardMonitor))
+//    StandbyScreens(viewModel, {})
+//}
 
