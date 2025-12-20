@@ -9,10 +9,13 @@ object INS {
     val ChangePin = 0x21.toByte()
     val VerifyPin = 0x20.toByte()
     val UnblockPin = 0x2C.toByte()
+    val ResetTry = 0x2D.toByte()
     val GetPubKey = 0x30.toByte()
     val SignRSA = 0x31.toByte()
     val SetInfo = 0x50.toByte()
     val GetInfo = 0x51.toByte()
+    val INS_GET_IMAGE_CHUNK: Byte = 0x52
+    val INS_UPLOAD_IMAGE_CHUNK: Byte = 0x53
 }
 
 fun getStatusWord(response: ByteArray): Int {
