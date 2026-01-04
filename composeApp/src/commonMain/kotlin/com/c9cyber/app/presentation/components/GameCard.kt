@@ -22,29 +22,31 @@ import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun GameCard(
-    gameName: String,
+    game: com.c9cyber.app.domain.model.Game,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier, // Xóa bỏ aspectRatio ở đây
+        modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = BackgroundSecondary)
+        colors = CardDefaults.cardColors(containerColor = BackgroundSecondary),
+        onClick = onClick
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                painter = painterResource(Res.drawable.game_placeholder),
-                contentDescription = gameName,
+                painter = painterResource(game.imageRes ?: Res.drawable.game_placeholder),
+                contentDescription = game.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f) // Thêm aspectRatio(1f) để ảnh luôn là hình vuông
+                    .aspectRatio(1f)
                     .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
             )
 
             Text(
-                text = gameName,
+                text = game.name,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,

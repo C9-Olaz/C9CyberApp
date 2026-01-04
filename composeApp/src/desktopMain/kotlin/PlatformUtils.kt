@@ -13,8 +13,16 @@ actual fun shutdownPC() {
 actual fun openExe(path: String) {
     // Code to open an .exe file
     try {
-        Runtime.getRuntime().exec(path)
-    } catch (e: java.io.IOException) {
+        val file = java.io.File(path)
+        if (!file.exists()) {
+            throw java.io.FileNotFoundException("File not found: $path")
+        }
+        
+        val processBuilder = ProcessBuilder(file.absolutePath)
+        processBuilder.directory(file.parentFile)
+        processBuilder.start()
+    } catch (e: Exception) {
         e.printStackTrace()
+        throw e
     }
 }

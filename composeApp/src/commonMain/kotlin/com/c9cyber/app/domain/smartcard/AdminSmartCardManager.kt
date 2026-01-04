@@ -194,4 +194,18 @@ class AdminSmartCardManager(
             null
         }
     }
+
+    fun creditBalance(amount: Short): Boolean {
+        return try {
+            val data = byteArrayOf(
+                (amount.toInt() shr 8).toByte(),
+                (amount.toInt() and 0xFF).toByte()
+            )
+            val apdu = byteArrayOf(AppletCLA, INS.Credit, 0x00, 0x00, 0x02.toByte()) + data
+            val response = transport.transmit(apdu)
+            getStatusWord(response) == 0x9000
+        } catch (e: Exception) {
+            false
+        }
+    }
 }

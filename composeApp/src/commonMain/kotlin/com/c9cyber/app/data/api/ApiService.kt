@@ -1,6 +1,5 @@
 package com.c9cyber.app.data.api
 
-import com.c9cyber.app.BuildConfig
 import com.c9cyber.app.data.model.*
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -9,8 +8,9 @@ import io.ktor.http.*
 import kotlinx.serialization.json.Json
 
 class ApiService(private val client: HttpClient) {
-    private val baseUrl = "http://euler.olaz.io.vn:3000"
+    private val baseUrl = "http://192.168.1.244:3000"
 
+    // --- Users ---
     suspend fun registerUser(userId: String, pemPublicKey: String): Boolean {
         val requestBody = RegisterRequest(
             user_id = userId,
@@ -28,6 +28,7 @@ class ApiService(private val client: HttpClient) {
         return response.status == HttpStatusCode.Created
     }
 
+    // --- Authentication ---
     suspend fun getChallenge(userId: String): String? {
         val requestBody = ChallengeRequest(user_id = userId)
 
@@ -55,4 +56,35 @@ class ApiService(private val client: HttpClient) {
         }
         return response.status == HttpStatusCode.OK
     }
+
+    // --- Menu Categories ---
+    suspend fun getAllMenuCategories(): List<MenuCategory>? {
+        val response = client.get("$baseUrl/api/menu-categories")
+        return if (response.status == HttpStatusCode.OK) {
+            response.body()
+        } else null
+    }
+
+    // --- Menu Items ---
+    suspend fun getAllMenuItems(): List<MenuItem>? {
+        val response = client.get("$baseUrl/api/menu-items")
+        return if (response.status == HttpStatusCode.OK) {
+            response.body()
+        } else null
+    }
+
+    suspend fun getMenuItemsByCategory(categoryId: Int): List<MenuItem>? {
+        val response = client.get("$baseUrl/api/menu-items/category/$categoryId")
+        return if (response.status == HttpStatusCode.OK) {
+            response.body()
+        } else null
+    }
+
+    suspend fun getMenuItemById(id: Int): MenuItem? {
+        val response = client.get("$baseUrl/api/menu-items/$id")
+        return if (response.status == HttpStatusCode.OK) {
+            response.body()
+        } else null
+    }
+
 }

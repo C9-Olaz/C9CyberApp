@@ -16,17 +16,20 @@ import com.c9cyber.app.presentation.theme.TextPrimary
 import com.c9cyber.app.presentation.theme.TextSecondary
 
 @Composable
-fun SearchBar(modifier: Modifier = Modifier) {
-    var text by remember { mutableStateOf("") }
+fun SearchBar(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val cornerShape = RoundedCornerShape(8.dp)
 
     OutlinedTextField(
-        value = text,
-        onValueChange = { text = it },
+        value = value,
+        onValueChange = onValueChange,
         modifier = modifier
             .fillMaxWidth()
             .border(1.dp, AccentColor, cornerShape),
-        placeholder = { Text("Tìm kiếm món...", color = TextSecondary) },
+        placeholder = { Text("Tìm kiếm", color = TextSecondary) },
 
         leadingIcon = null,
         trailingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon", tint = AccentColor) },

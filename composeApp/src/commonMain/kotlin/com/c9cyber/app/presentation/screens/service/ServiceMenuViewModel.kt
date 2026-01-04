@@ -3,13 +3,19 @@ package com.c9cyber.app.presentation.screens.service
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.c9cyber.app.data.repository.MenuRepository
+import com.c9cyber.app.data.repository.ServiceRepository
 import com.c9cyber.app.domain.model.CartItem
 import com.c9cyber.app.domain.model.ServiceItem
+import com.c9cyber.app.domain.model.ServiceType
 import com.c9cyber.app.domain.smartcard.PinVerifyResult
 import com.c9cyber.app.domain.smartcard.SmartCardManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ServiceMenuUiState(
@@ -23,10 +29,12 @@ data class ServiceMenuUiState(
 )
 
 class ServiceMenuViewModel(
-    private val smartCardManager: SmartCardManager
+    private val smartCardManager: SmartCardManager,
+    private val serviceRepository: ServiceRepository? = null,
+    private val menuRepository: MenuRepository? = null
 ) {
-    var uiState by mutableStateOf(ServiceMenuUiState())
-        private set
+    private val _uiState = MutableStateFlow(ServiceMenuUiState())
+    val uiState = _uiState.asStateFlow()
 
     private val viewModelScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -35,24 +43,66 @@ class ServiceMenuViewModel(
     }
 
     private fun loadServiceItems() {
-        // Tạo dữ liệu mẫu đa dạng gồm đồ ăn và đồ uống
-        val items = listOf(
-            ServiceItem("1", "Sting Dâu", 12000, "food_placeholder"),
-            ServiceItem("2", "Coca Cola", 10000, "food_placeholder"),
-            ServiceItem("3", "Red Bull", 15000, "food_placeholder"),
-            ServiceItem("4", "Mì Tôm Trứng", 25000, "food_placeholder"),
-            ServiceItem("5", "Mì Cay 7 Cấp", 45000, "food_placeholder"),
-            ServiceItem("6", "Cơm Rang Dưa Bò", 40000, "food_placeholder"),
-            ServiceItem("7", "Bánh Mì Pate", 20000, "food_placeholder"),
-            ServiceItem("8", "Trà Đào Cam Sả", 30000, "food_placeholder"),
-            ServiceItem("9", "Cafe Sữa Đá", 25000, "food_placeholder")
-        )
-        uiState = uiState.copy(serviceItems = items)
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            
+            if (menuRepository != null) {
+                val result = menuRepository.getMenuItems()
+                result.fold(
+                    onSuccess = { menuItems ->
+                        val serviceItems = menuItems.map { menuItem ->
+                            ServiceItem(
+                                id = menuItem.id.toString(),
+                                name = menuItem.name,
+                                price = menuItem.price.toInt(),
+                                type = if (menuItem.category_name.contains("Food", ignoreCase = true) || menuItem.category_name.contains("Đồ ăn", ignoreCase = true)) ServiceType.Food else ServiceType.Drink,
+                                isAvailable = menuItem.is_available
+                            )
+                        }
+                        _uiState.update {
+                            it.copy(
+                                serviceItems = serviceItems,
+                                isLoading = false,
+                                errorMessage = null
+                            )
+                        }
+                        return@launch
+                    },
+                    onFailure = {
+                        println("API failed, falling back to dummy data: ${it.message}")
+                    }
+                )
+            }
+
+            // Fallback to dummy data
+            val repository = serviceRepository ?: ServiceRepository()
+            val result = repository.getServiceItems()
+            
+            result.fold(
+                onSuccess = { items ->
+                    _uiState.update {
+                        it.copy(
+                            serviceItems = items,
+                            isLoading = false,
+                            errorMessage = null
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            serviceItems = emptyList(),
+                            isLoading = false,
+                            errorMessage = "Không thể tải danh sách món. ${error.message}"
+                        )
+                    }
+                }
+            )
+        }
     }
 
-    // Thêm vào giỏ hàng hoặc tăng số lượng
     fun addToCart(item: ServiceItem) {
-        val currentCart = uiState.cartItems.toMutableList()
+        val currentCart = _uiState.value.cartItems.toMutableList()
         val existingItemIndex = currentCart.indexOfFirst { it.serviceItem.id == item.id }
 
         if (existingItemIndex != -1) {
@@ -61,13 +111,11 @@ class ServiceMenuViewModel(
         } else {
             currentCart.add(CartItem(item, 1))
         }
-        uiState = uiState.copy(cartItems = currentCart)
+        _uiState.update { it.copy(cartItems = currentCart) }
     }
 
-    // Giảm số lượng, nếu còn 1 thì xóa khỏi giỏ (hoặc giữ nguyên tùy logic, ở đây là giảm tới 1 rồi cần nút xóa riêng để xóa hẳn, hoặc giảm về 0 thì xóa)
-    // Logic hiện tại: Giảm số lượng, nếu về 0 thì xóa
     fun removeFromCart(item: ServiceItem) {
-        val currentCart = uiState.cartItems.toMutableList()
+        val currentCart = _uiState.value.cartItems.toMutableList()
         val existingItemIndex = currentCart.indexOfFirst { it.serviceItem.id == item.id }
 
         if (existingItemIndex != -1) {
@@ -77,66 +125,83 @@ class ServiceMenuViewModel(
             } else {
                 currentCart.removeAt(existingItemIndex)
             }
-            uiState = uiState.copy(cartItems = currentCart)
+            _uiState.update { it.copy(cartItems = currentCart) }
         }
     }
     
-    // Xóa hẳn món đó khỏi giỏ hàng bất kể số lượng
     fun removeEntireItem(item: ServiceItem) {
-        val currentCart = uiState.cartItems.toMutableList()
+        val currentCart = _uiState.value.cartItems.toMutableList()
         currentCart.removeAll { it.serviceItem.id == item.id }
-        uiState = uiState.copy(cartItems = currentCart)
+        _uiState.update { it.copy(cartItems = currentCart) }
     }
 
     fun showPinDialog() {
-        if (uiState.cartItems.isNotEmpty()) {
-            uiState = uiState.copy(showPinDialog = true, pinError = null)
+        if (_uiState.value.cartItems.isNotEmpty()) {
+            _uiState.update { it.copy(showPinDialog = true, pinError = null) }
         }
     }
 
     fun hidePinDialog() {
-        uiState = uiState.copy(showPinDialog = false, pinError = null)
+        _uiState.update { it.copy(showPinDialog = false, pinError = null) }
     }
 
-    // Xử lý thanh toán
     fun processPayment(pin: String) {
-        uiState = uiState.copy(isLoading = true, pinError = null)
+        _uiState.update { it.copy(isLoading = true, pinError = null) }
         viewModelScope.launch {
-            // 1. Xác thực PIN thẻ
             val verifyResult = smartCardManager.verifyPin(pin)
             when (verifyResult) {
                 is PinVerifyResult.Success -> {
-                    // 2. Nếu PIN đúng, thực hiện trừ tiền (Logic trừ tiền sẽ cần gọi xuống thẻ hoặc API)
-                    // Hiện tại giả lập thanh toán thành công
+                    val total = calculateTotal()
+                    val cardAmount = (total / 1000).toInt()
                     
-                    // TODO: Gọi hàm trừ tiền trong thẻ (ví dụ: smartCardManager.deductBalance(total))
+                    if (cardAmount > Short.MAX_VALUE) {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                pinError = "Tổng tiền quá lớn (tối đa ${Short.MAX_VALUE * 1000})"
+                            )
+                        }
+                        return@launch
+                    }
                     
-                    uiState = uiState.copy(
-                        isLoading = false,
-                        showPinDialog = false,
-                        cartItems = emptyList(), // Xóa giỏ hàng sau khi thanh toán
-                        isPaymentSuccess = true
-                    )
+                    val debitSuccess = smartCardManager.debitBalance(cardAmount.toShort())
+                    
+                    if (debitSuccess) {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                showPinDialog = false,
+                                cartItems = emptyList(),
+                                isPaymentSuccess = true
+                            )
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                pinError = "Không thể trừ tiền. Vui lòng kiểm tra số dư thẻ."
+                            )
+                        }
+                    }
                 }
                 is PinVerifyResult.CardLocked -> {
-                    uiState = uiState.copy(isLoading = false, pinError = "Thẻ đã bị khóa do nhập sai quá nhiều lần")
+                    _uiState.update { it.copy(isLoading = false, pinError = "Thẻ đã bị khóa do nhập sai quá nhiều lần") }
                 }
                 is PinVerifyResult.WrongPin -> {
-                    uiState = uiState.copy(isLoading = false, pinError = "Sai PIN. Còn lại ${verifyResult.remainingTries} lần thử")
+                    _uiState.update { it.copy(isLoading = false, pinError = "Sai PIN. Còn lại ${verifyResult.remainingTries} lần thử") }
                 }
                 is PinVerifyResult.Error -> {
-                    uiState = uiState.copy(isLoading = false, pinError = verifyResult.message)
+                    _uiState.update { it.copy(isLoading = false, pinError = verifyResult.message) }
                 }
             }
         }
     }
     
     fun resetPaymentSuccess() {
-        uiState = uiState.copy(isPaymentSuccess = false)
+        _uiState.update { it.copy(isPaymentSuccess = false) }
     }
 
-    // Tính tổng tiền
-    fun calculateTotal(): Long {
-        return uiState.cartItems.sumOf { it.serviceItem.price * it.quantity }
+    fun calculateTotal(): Int {
+        return _uiState.value.cartItems.sumOf { it.serviceItem.price * it.quantity }
     }
 }

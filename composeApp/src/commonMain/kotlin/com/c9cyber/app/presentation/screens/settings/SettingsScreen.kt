@@ -2,6 +2,8 @@ package com.c9cyber.app.presentation.screens.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -15,11 +17,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.c9cyber.app.domain.model.Transaction
 import com.c9cyber.app.presentation.components.ChangePinForm
 import com.c9cyber.app.presentation.components.PinDialog
 import com.c9cyber.app.presentation.components.UserInfoForm
 import com.c9cyber.app.presentation.navigation.Screen
 import com.c9cyber.app.presentation.theme.*
+import com.c9cyber.app.utils.formatCurrency
 import kotlinx.coroutines.delay
 
 @Composable
@@ -30,7 +34,7 @@ fun SettingsScreen(
 ) {
     val state = viewModel.uiState
     var selectedTabIndex by remember { mutableStateOf(0) }
-    val tabs = listOf("Thông tin cá nhân", "Thay đổi mã PIN")
+    val tabs = listOf("Thông tin cá nhân", "Thay đổi mã PIN", "Lịch sử giao dịch")
 
     LaunchedEffect(state.successMessage) {
         if (state.successMessage != null) {
@@ -47,6 +51,13 @@ fun SettingsScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadUserInfoFromCard()
+    }
+
+    // Load transaction history when tab is selected
+    LaunchedEffect(selectedTabIndex) {
+        if (selectedTabIndex == 2) {
+            viewModel.loadTransactionHistory()
+        }
     }
 
     Box(
@@ -94,7 +105,7 @@ fun SettingsScreen(
                         color = AccentColor
                     )
                 },
-                modifier = Modifier.width(500.dp)
+                modifier = Modifier.width(600.dp)
             ) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
@@ -115,31 +126,65 @@ fun SettingsScreen(
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = BackgroundSecondary),
-                modifier = Modifier.width(500.dp),
+                modifier = Modifier.width(600.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (selectedTabIndex == 0) {
-                        UserInfoForm(
-                            state = state,
-                            onFullNameChange = viewModel::onFullNameChange,
-                            onUserNameChange = viewModel::onUsernameChange,
-                            onAvatarChange = viewModel::onAvatarChange,
-                            onEditClicked = viewModel::onEditClicked,
-                            onCancelEditClicked = viewModel::onCancelEditClicked,
-                            onSaveInfoClicked = viewModel::onSaveInfoClicked
-                        )
-                    } else {
-                        ChangePinForm(
-                            state = state,
-                            onOldPinChange = viewModel::onOldPinChange,
-                            onNewPinChange = viewModel::onNewPinChange,
-                            onConfirmNewPinChange = viewModel::onConfirmPinChange,
-                            onChangePinClicked = viewModel::onChangePinClicked
-                        )
+                    when (selectedTabIndex) {
+                        0 -> {
+                            UserInfoForm(
+                                state = state,
+                                onFullNameChange = viewModel::onFullNameChange,
+                                onUserNameChange = viewModel::onUsernameChange,
+                                onAvatarChange = viewModel::onAvatarChange,
+                                onEditClicked = viewModel::onEditClicked,
+                                onCancelEditClicked = viewModel::onCancelEditClicked,
+                                onSaveInfoClicked = viewModel::onSaveInfoClicked
+                            )
+                        }
+                        1 -> {
+                            ChangePinForm(
+                                state = state,
+                                onOldPinChange = viewModel::onOldPinChange,
+                                onNewPinChange = viewModel::onNewPinChange,
+                                onConfirmNewPinChange = viewModel::onConfirmPinChange,
+                                onChangePinClicked = viewModel::onChangePinClicked
+                            )
+                        }
+                        2 -> {
+                            if (state.isLoading) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(300.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = AccentColor)
+                                }
+                            } else if (state.transactions.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(300.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Chưa có giao dịch nào",
+                                        color = TextSecondary,
+                                        fontSize = 16.sp
+                                    )
+                                }
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxWidth().height(400.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    items(state.transactions) { transaction ->
+                                        TransactionItem(transaction)
+                                        Divider(color = Color.Gray.copy(alpha = 0.2f))
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -190,6 +235,29 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun TransactionItem(transaction: Transaction) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = if (transaction.type == 1.toByte()) "Nạp tiền" else "Thanh toán",
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp
+        )
+        
+        Text(
+            text = "${if (transaction.type == 1.toByte()) "+" else "-"}${formatCurrency(transaction.amount.toInt() * 1000)} VND",
+            color = if (transaction.type == 1.toByte()) AccentColor else DestructiveColor,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp
+        )
     }
 }
 

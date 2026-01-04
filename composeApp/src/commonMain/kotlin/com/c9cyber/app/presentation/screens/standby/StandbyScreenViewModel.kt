@@ -111,18 +111,21 @@ class StandbyScreenViewModel(
                         updateState { it.copy(status = StandbyStatus.Success, isLoading = false) }
                     }
 
-//                    val authResult = authRepository.authenticate(memberInfo.id)
-//
-//                    authResult.onSuccess {
-//                        updateState { it.copy(status = StandbyStatus.Success, isLoading = false) }
-//                    }.onFailure { error ->
-//                        updateState {
-//                            it.copy(
-//                                errorMessage = "Xác thực RSA thất bại: ${error.message}",
-//                                isLoading = false
-//                            )
-//                        }
-//                    }
+                    val authResult = authRepository.authenticate(memberInfo.id)
+
+                    authResult.onSuccess {
+                        updateState { it.copy(status = StandbyStatus.FirsLogin, isLoading = false) }
+                        if (!firstLogin) {
+                            updateState { it.copy(status = StandbyStatus.Success, isLoading = false) }
+                        }
+                    }.onFailure { error ->
+                        updateState {
+                            it.copy(
+                                errorMessage = "Xác thực RSA thất bại: ${error.message}",
+                                isLoading = false
+                            )
+                        }
+                    }
                 }
 
                 is PinVerifyResult.CardLocked -> {

@@ -3,15 +3,18 @@ package com.c9cyber.app.presentation.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.c9cyber.app.domain.model.GameType
 import com.c9cyber.app.presentation.theme.BackgroundSecondary
 
 @Composable
-fun GameCategoryList() {
-    val categories = listOf("Game Online", "Game Offline", "Ứng dụng")
-    var selectedIndex by remember { mutableStateOf(0) }
+fun GameCategoryList(
+    selectedCategory: GameType?,
+    onCategorySelected: (GameType?) -> Unit
+) {
+    val categories = listOf("Tất cả", "Game Online", "Game Offline")
 
     Surface(
         modifier = Modifier.fillMaxHeight(),
@@ -24,11 +27,26 @@ fun GameCategoryList() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            categories.forEachIndexed { index, category ->
+            categories.forEach { category ->
+                val isSelected = when (category) {
+                    "Tất cả" -> selectedCategory == null
+                    "Game Online" -> selectedCategory == GameType.Online
+                    "Game Offline" -> selectedCategory == GameType.Offline
+                    else -> false
+                }
                 CategoryItem(
                     text = category,
-                    isSelected = selectedIndex == index,
-                    onClick = { selectedIndex = index }
+                    isSelected = isSelected,
+                    onClick = {
+                        onCategorySelected(
+                            when (category) {
+                                "Tất cả" -> null
+                                "Game Online" -> GameType.Online
+                                "Game Offline" -> GameType.Offline
+                                else -> null
+                            }
+                        )
+                    }
                 )
             }
         }

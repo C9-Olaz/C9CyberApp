@@ -30,12 +30,6 @@ fun SidebarMenu(isExpanded: Boolean, navigateTo: (Screen) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        SidebarMenuItem(
-            painter = painterResource(Res.drawable.play),
-            text = "Menu Game",
-            isExpanded = isExpanded,
-            onClick = { navigateTo(Screen.Home) }
-        )
 
         SidebarMenuItem(
             painter = painterResource(Res.drawable.list),

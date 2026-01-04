@@ -192,43 +192,6 @@ class SmartCardManager(
         }
     }
 
-//    fun loadUserInfo() : User {
-//        var user = User()
-//
-//        try {
-//            val apdu = byteArrayOf(AppletCLA, INS.GetInfo, 0x00, 0x00, 0x00)
-//            val respond = transport.transmit(apdu)
-//
-//            if (respond.size >= 2) {
-//                val sw = getStatusWord(respond)
-//
-//                if (sw == 0x9000) {
-//                    val data = respond.copyOfRange(0, respond.size - 2)
-//                    val dataString = String(data, Charsets.UTF_8)
-//
-//                    val sections = dataString.split("|")
-//                    if (sections.size >= 4) {
-//                        val memberId = sections[0]
-//                        val username = sections[1]
-//                        val name = sections[2]
-//                        val level = sections[3]
-//
-//                        user = User(
-//                            id = memberId,
-//                            userName = username,
-//                            name = name,
-//                            level = UserLevel.valueOf(level),
-//                        )
-//                    }
-//                }
-//            }
-//        } catch (e: Exception) {
-//            println(e)
-//        }
-//
-//        return user
-//    }
-
     fun loadUserInfo(): User {
         var user = User()
         // Define the new INS for chunk loading (Must match your Applet)
@@ -321,7 +284,16 @@ class SmartCardManager(
             }
 
             // =========================================================================
-            // PHASE 3: FINALIZE
+            // PHASE 3: GET BALANCE
+            // =========================================================================
+            println(">>> MANAGER: Lấy số dư...")
+            val rawBalance = getBalance() ?: 0
+            // Convert: 1 unit from card = 1000 in actual balance
+            val balance = rawBalance * 1000
+            println(">>> MANAGER: Số dư thô từ thẻ: $rawBalance, Số dư sau chuyển đổi: $balance")
+
+            // =========================================================================
+            // PHASE 4: FINALIZE
             // =========================================================================
             val rawImageBytes = fullImageStream.toByteArray()
             println(">>> MANAGER: Tổng size ảnh tải được: ${rawImageBytes.size} bytes")
@@ -334,16 +306,11 @@ class SmartCardManager(
                 null
             }
 
-//            // Log hex header for debugging
-//            if (finalImage.isNotEmpty()) {
-//                val header = finalImage.take(10).joinToString(" ") { "%02X".format(it) }
-//                println(">>> MANAGER: Header ảnh: $header")
-//            }
-
             user = User(
                 id = memberId,
                 userName = username,
                 name = name,
+                balance = balance,
                 level = UserLevel.valueOf(levelString),
                 isFistTimeLogin = firstLogin,
                 avatar = finalImage
@@ -383,39 +350,6 @@ class SmartCardManager(
 
         return data
     }
-//    fun updateUserInfo(userInfo: User, pin: String): UpdateInfoResult {
-//        return try {
-//            // 1. Verify PIN (Sử dụng lại logic từ verifyPin, nhưng cần check CardLocked)
-//            val verifyResult = verifyPin(pin)
-//            when (verifyResult) {
-//                is PinVerifyResult.Success -> {
-//                    // OK để tiếp tục
-//                }
-//
-//                is PinVerifyResult.CardLocked -> return UpdateInfoResult.CardLocked
-//                is PinVerifyResult.WrongPin -> return UpdateInfoResult.WrongPin(verifyResult.remainingTries)
-//                is PinVerifyResult.Error -> return UpdateInfoResult.Error(verifyResult.message)
-//            }
-//
-//            // 2. Update Info
-//            val rawString = "${userInfo.id}|${userInfo.userName}|${userInfo.name}|${userInfo.level.name}"
-//            val dataBytes = rawString.toByteArray(Charsets.UTF_8)
-//
-//            // APDU: 00 50 00 00 Lc [Data]
-//            val apdu = byteArrayOf(AppletCLA, INS.SetInfo, 0x00, 0x00, dataBytes.size.toByte()) + dataBytes
-//
-//            val response = transport.transmit(apdu)
-//            val sw = getStatusWord(response)
-//
-//            if (sw == 0x9000) {
-//                UpdateInfoResult.Success
-//            } else {
-//                UpdateInfoResult.Error("Lỗi thẻ: SW=${Integer.toHexString(sw)}")
-//            }
-//        } catch (e: Exception) {
-//            UpdateInfoResult.Error("Lỗi kết nối: ${e.message}")
-//        }
-//    }
 
     fun updateUserInfo(userInfo: User, pin: String): UpdateInfoResult {
         return try {
@@ -505,20 +439,6 @@ class SmartCardManager(
         }
     }
 
-    fun creditBalance(amount: Short): Boolean {
-        return try {
-            val data = byteArrayOf(
-                (amount.toInt() shr 8).toByte(),
-                (amount.toInt() and 0xFF).toByte()
-            )
-            val apdu = byteArrayOf(AppletCLA, INS.Credit, 0x00, 0x00, 0x02.toByte()) + data
-            val response = transport.transmit(apdu)
-            getStatusWord(response) == 0x9000
-        } catch (e: Exception) {
-            false
-        }
-    }
-
     fun debitBalance(amount: Short): Boolean {
         return try {
             val data = byteArrayOf(
@@ -551,15 +471,13 @@ class SmartCardManager(
         }
     }
 
-    fun signWithRSA(data: ByteArray): ByteArray? {
+    fun getTransactionHistory(): ByteArray? {
         return try {
-            val header = byteArrayOf(AppletCLA, INS.SignRSA, 0x00, 0x00, data.size.toByte())
-            val apdu = header + data
-
+            val apdu = byteArrayOf(AppletCLA, 0x43.toByte(), 0x00, 0x00, 0x00)
             val response = transport.transmit(apdu)
             val sw = getStatusWord(response)
 
-            if (sw == 0x9000 && response != null) {
+            if (sw == 0x9000) {
                 response.copyOfRange(0, response.size - 2)
             } else {
                 null

@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
+import com.c9cyber.app.domain.model.Transaction
 import com.c9cyber.app.domain.model.User
 import com.c9cyber.app.domain.model.UserLevel
 import com.c9cyber.app.domain.smartcard.ChangePinResult
@@ -15,6 +16,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.jetbrains.skia.Bitmap
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 data class SettingUiState(
     val memberId: String = "",
@@ -26,6 +29,8 @@ data class SettingUiState(
     val oldPin: String = "",
     val newPin: String = "",
     val confirmNewPin: String = "",
+
+    val transactions: List<Transaction> = emptyList(),
 
     val isCardLocked: Boolean = false,
     val showPinDialog: Boolean = false,
@@ -246,6 +251,58 @@ class SettingScreenViewModel(
                 )
             }
         }
+    }
+
+    fun loadTransactionHistory() {
+        viewModelScope.launch {
+            println(">>> VM: Bắt đầu tải lịch sử giao dịch...")
+            uiState = uiState.copy(isLoading = true, errorMessage = null)
+            val historyBytes = smartCardManager.getTransactionHistory()
+            
+            if (historyBytes != null) {
+                println(">>> VM: Nhận được ${historyBytes.size} bytes dữ liệu lịch sử.")
+                // Log raw bytes for debugging
+                println(">>> VM: Raw bytes: ${historyBytes.joinToString(" ") { "%02X".format(it) }}")
+                
+                val transactions = parseTransactions(historyBytes)
+                println(">>> VM: Đã parse được ${transactions.size} giao dịch.")
+                uiState = uiState.copy(
+                    transactions = transactions,
+                    isLoading = false
+                )
+            } else {
+                println(">>> VM: Lỗi tải lịch sử giao dịch (null response).")
+                uiState = uiState.copy(
+                    isLoading = false,
+                    errorMessage = "Không thể tải lịch sử giao dịch"
+                )
+            }
+        }
+    }
+
+    private fun parseTransactions(data: ByteArray): List<Transaction> {
+        val transactions = mutableListOf<Transaction>()
+        val buffer = ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN)
+        
+        // Record format: [Amount (2 bytes), Type (1 byte), ID (2 bytes), Padding (1 byte)]
+        val recordSize = 6
+        
+        while (buffer.remaining() >= recordSize) {
+            val amount = buffer.short
+            val type = buffer.get()
+            val id = buffer.short
+            buffer.get() // Skip padding byte
+            
+            println(">>> VM: Parsed record - ID: $id, Type: $type, Amount: $amount")
+            
+            // Filter out empty records if necessary (e.g. type 0 and amount 0)
+            if (type != 0.toByte() || amount != 0.toShort()) {
+                transactions.add(Transaction(id, type, amount))
+            }
+        }
+        
+        // Sort by transaction ID, newest first
+        return transactions.sortedByDescending { it.id }
     }
 
     fun dismissSuccessMessage() {

@@ -13,19 +13,28 @@ import kotlinproject.composeapp.generated.resources.caret_left
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
-fun ServiceCategoryList(onBack: () -> Unit) {
-    val categories = listOf("Đồ ăn", "Đồ uống")
-    var selectedIndex by remember { mutableStateOf(0) }
+fun ServiceCategoryList(
+    selectedCategory: com.c9cyber.app.domain.model.ServiceType?,
+    onCategorySelected: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    val categories = listOf("Tất cả", "Đồ ăn", "Đồ uống")
 
     Column(
         modifier = Modifier.width(200.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            categories.forEachIndexed { index, category ->
+            categories.forEach { category ->
+                val isSelected = when (category) {
+                    "Tất cả" -> selectedCategory == null
+                    "Đồ ăn" -> selectedCategory == com.c9cyber.app.domain.model.ServiceType.Food
+                    "Đồ uống" -> selectedCategory == com.c9cyber.app.domain.model.ServiceType.Drink
+                    else -> false
+                }
                 CategoryItem(
                     text = category,
-                    isSelected = selectedIndex == index,
-                    onClick = { selectedIndex = index }
+                    isSelected = isSelected,
+                    onClick = { onCategorySelected(category) }
                 )
             }
         }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.Icon
@@ -29,6 +30,8 @@ import com.c9cyber.app.presentation.screens.admin.dashboard.DashboardViewModel
 import com.c9cyber.app.presentation.screens.admin.initcard.InitCardScreen
 import com.c9cyber.app.presentation.screens.admin.initcard.InitCardScreenViewModel
 import com.c9cyber.app.presentation.screens.admin.unblockcard.UnblockCardScreen
+import com.c9cyber.app.presentation.screens.admin.credit.CreditScreen
+import com.c9cyber.app.presentation.screens.admin.credit.CreditScreenViewModel
 import com.c9cyber.app.presentation.theme.AccentColor
 import com.c9cyber.app.presentation.theme.BackgroundPrimary
 import com.c9cyber.app.presentation.theme.BackgroundSecondary
@@ -36,7 +39,7 @@ import com.c9cyber.app.utils.MockSmartCardTransport
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 
-enum class AdminScreen { INIT, UNBLOCK, RESET }
+enum class AdminScreen { INIT, UNBLOCK, RESET, CREDIT }
 
 @Composable
 fun AdminDashboard(
@@ -47,6 +50,7 @@ fun AdminDashboard(
     val initVM = remember { InitCardScreenViewModel(manager, apiService) }
     val unblockVM = remember { UnblockCardScreenViewModel(manager) }
     val resetVM = remember { ResetAttemptScreenViewModel(manager) }
+    val creditVM = remember { CreditScreenViewModel(manager) }
 
     val readerStatus by dashboardVM.readerStatus.collectAsState()
     var currentScreen by remember { mutableStateOf(AdminScreen.INIT) }
@@ -82,6 +86,12 @@ fun AdminDashboard(
                 SidebarItem("Reset lần thử", Icons.Default.LockOpen, currentScreen == AdminScreen.RESET) {
                     currentScreen = AdminScreen.RESET
                 }
+
+                Spacer(Modifier.height(8.dp))
+
+                SidebarItem("Nạp tiền", Icons.Default.AccountBalance, currentScreen == AdminScreen.CREDIT) {
+                    currentScreen = AdminScreen.CREDIT
+                }
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
@@ -90,6 +100,7 @@ fun AdminDashboard(
                     AdminScreen.INIT -> InitCardScreen(initVM, isReady)
                     AdminScreen.UNBLOCK -> UnblockCardScreen(unblockVM, isReady)
                     AdminScreen.RESET -> ResetAttemptScreen(resetVM, isReady)
+                    AdminScreen.CREDIT -> CreditScreen(creditVM, isReady)
                 }
             }
         }

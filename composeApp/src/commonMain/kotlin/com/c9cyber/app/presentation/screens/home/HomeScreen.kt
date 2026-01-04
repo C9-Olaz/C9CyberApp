@@ -6,12 +6,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Divider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.c9cyber.app.data.repository.MenuRepository
 import com.c9cyber.app.presentation.components.AdsBanner
+import com.c9cyber.app.presentation.components.BalanceWarningDialog
+import com.c9cyber.app.presentation.components.InsufficientBalanceDialog
 import com.c9cyber.app.presentation.components.LogoSection
 import com.c9cyber.app.presentation.components.SidebarMenu
 import com.c9cyber.app.presentation.components.TimeStatusPanel
@@ -29,9 +34,46 @@ fun HomeScreen(
 ) {
 
     val state = viewModel.uiState
+    val gameTimeState by viewModel.gameTimeService.gameTimeState.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadUserInfo()
+    }
+    
+    // Kiểm tra balance khi load user info
+    LaunchedEffect(state.user?.balance) {
+        val balance = state.user?.balance ?: 0
+        if (balance < 2000 && state.user != null) {
+            // Balance không đủ, dialog sẽ được hiển thị
+        }
+    }
+
+    LaunchedEffect(gameTimeState.isPlaying) {
+        if (gameTimeState.isPlaying) {
+            while (gameTimeState.isPlaying) {
+                kotlinx.coroutines.delay(30000) // Refresh every 30 seconds
+                viewModel.refreshBalance()
+            }
+        }
+    }
+
+    val showInsufficientBalance = !gameTimeState.isPlaying && state.user != null && (state.user?.balance ?: 0) < 2000
+    
+    if (showInsufficientBalance) {
+        InsufficientBalanceDialog()
+    }
+
+    // Show warning dialogs
+    if (gameTimeState.showLowBalanceWarning) {
+        BalanceWarningDialog(
+            isLowBalance = true,
+            remainingTimeMinutes = gameTimeState.remainingTimeSeconds / 60,
+            onDismiss = viewModel.gameTimeService::dismissLowBalanceWarning
+        )
+    }
+
+    if (gameTimeState.showInsufficientFunds) {
+        InsufficientBalanceDialog()
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -49,7 +91,13 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 UserProfileCard(user = state.user, isExpanded = isExpanded)
-                TimeStatusPanel(isExpanded = isExpanded)
+                TimeStatusPanel(
+                    isExpanded = isExpanded,
+                    remainingTimeMinutes = gameTimeState.remainingTimeSeconds / 60,
+                    playTimeSeconds = gameTimeState.playTimeSeconds,
+                    isPlaying = gameTimeState.isPlaying,
+                    totalUsableTimeSeconds = state.user?.totalUsableTime ?: 0
+                )
                 Divider(color = AccentColor.copy(alpha = 0.3f), thickness = 1.dp)
                 SidebarMenu(isExpanded = isExpanded, navigateTo = navigateTo)
                 Divider(color = AccentColor.copy(alpha = 0.3f), thickness = 1.dp)
@@ -64,7 +112,11 @@ fun HomeScreen(
                     .fillMaxHeight()
                     .weight(1f)
             ) {
-                GameMenuScreen()
+                GameMenuScreen(
+                    onGameClick = { game ->
+                        navigateTo(com.c9cyber.app.presentation.navigation.Screen.GameDetail(game))
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.width(24.dp))
